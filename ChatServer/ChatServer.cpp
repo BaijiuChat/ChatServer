@@ -29,7 +29,7 @@ int main()
        });
 	   auto port_str = cfg["SelfServer"]["port"];
 	   CServer s(io_context, atoi(port_str.c_str()));
-	   io_context.run();
+	   io_context.run(); // 必须有绑定（上一行代码）
    }
    catch (std::exception& e) {
 	   std::cerr << "出现错误：" << e.what() << std::endl;
