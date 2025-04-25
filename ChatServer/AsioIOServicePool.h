@@ -1,7 +1,9 @@
 #pragma once
 #include <vector>
 #include <thread>
-#include <memory>       // 用于 std::unique_ptr
+#include <memory>
+#include <mutex>
+#include <atomic>
 #include <boost/asio.hpp>
 #include "Singleton.h"
 
@@ -27,5 +29,6 @@ private:
     std::vector<IOService> _ioServices;
     std::vector<WorkPtr> _works;
     std::vector<std::thread> _threads;
-    std::size_t _nextIOService;
+    std::atomic<std::size_t> _nextIOService;  // 使用atomic代替普通size_t
+    std::mutex _io_mutex;  // 保护io_service访问
 };

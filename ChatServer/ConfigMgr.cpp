@@ -1,70 +1,50 @@
 #include "ConfigMgr.h"
-#include <iostream>
-#include <boost/filesystem.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
+ConfigMgr::ConfigMgr(){
+	// 获取当前工作目录  
+	boost::filesystem::path current_path = boost::filesystem::current_path();
+	// 构建config.ini文件的完整路径  
+	boost::filesystem::path config_path = current_path / "config.ini";
+	std::cout << "Config path: " << config_path << std::endl;
 
-ConfigMgr::ConfigMgr() {
-	boost::filesystem::path config_path = boost::filesystem::current_path() / "config.ini";
-	std::cout << "config_path is " << config_path.string() << std::endl;
-
+	// 使用Boost.PropertyTree来读取INI文件  
 	boost::property_tree::ptree pt;
 	boost::property_tree::read_ini(config_path.string(), pt);
 
-	for (const auto& [section_name, section_tree] : pt) {
-		// 直接在 map 中构造 SectionInfo
-		auto& section_info = _config_map[section_name];
-		// 直接遍历并填充 section_datas
-		for (const auto& [key, value_node] : section_tree) {
-			section_info._section_datas.emplace(key, value_node.data());
+
+	// 遍历INI文件中的所有section  
+	for (const auto& section_pair : pt) {
+		const std::string& section_name = section_pair.first;
+		const boost::property_tree::ptree& section_tree = section_pair.second;
+
+		// 对于每个section，遍历其所有的key-value对  
+		std::map<std::string, std::string> section_config;
+		for (const auto& key_value_pair : section_tree) {
+			const std::string& key = key_value_pair.first;
+			const std::string& value = key_value_pair.second.get_value<std::string>();
+			section_config[key] = value;
+		}
+		SectionInfo sectionInfo;
+		sectionInfo._section_datas = section_config;
+		// 将section的key-value对保存到config_map中  
+		_config_map[section_name] = sectionInfo;
+	}
+
+	// 输出所有的section和key-value对  
+	for (const auto& section_entry : _config_map) {
+		const std::string& section_name = section_entry.first;
+		SectionInfo section_config = section_entry.second;
+		std::cout << "[" << section_name << "]" << std::endl;
+		for (const auto& key_value_pair : section_config._section_datas) {
+			std::cout << key_value_pair.first << "=" << key_value_pair.second << std::endl;
 		}
 	}
 
-	// 控制台输出配置文件内容
-	for (const auto& [section_name, section_info] : _config_map) {
-		std::cout << "Section: " << section_name << std::endl;
-		for (const auto& [key, value] : section_info._section_datas) {
-			std::cout << "  " << key << ": " << value << std::endl;
-		}
-	}
 }
 
-std::string ConfigMgr::GetValue(const std::string& section, const std::string& key) const
-{
-	// 1. 检查section是否存在
-	auto section_it = _config_map.find(section);
-	if (section_it == _config_map.end()) {
-		return ""; // 或者可以throw异常
+std::string ConfigMgr::GetValue(const std::string& section, const std::string& key) {
+	if (_config_map.find(section) == _config_map.end()) {
+		return "";
 	}
 
-	// 2. 检查key是否存在
-	const auto& section_data = section_it->second._section_datas;
-	auto key_it = section_data.find(key);
-	if (key_it == section_data.end()) {
-		return ""; // 或者可以throw异常
-	}
-
-	// 3. 返回找到的值
-	return key_it->second;
+	return _config_map[section].GetValue(key);
 }
-
-/////////////// 旧版代码 ///////////////
-//boost::property_tree::ptree pt; // 创建一个ptree对象
-//boost::property_tree::read_ini(config_path.string(), pt); // 读取配置文件
-//
-//for (const auto& section_pair : pt) {
-//	const std::string& section_name = section_pair.first; // 获取section的名称
-//
-//	const boost::property_tree::ptree& section_tree = section_pair.second; // 获取section的内容
-//	std::map<std::string, std::string> section_config; // 创建一个map来存储内部section的数据
-//	for (const auto& item : section_tree) {
-//		const std::string& key = item.first; // 获取key
-//		const std::string& value = item.second.data(); // 获取value
-//		section_config[key] = value; // 将key和value存入map中
-//	}
-//	SectionInfo section_info; // 创建一个SectionInfo对象
-//	section_info._section_datas = section_config; // 将map赋值给SectionInfo对象
-//
-//	_config_map[section_name] = section_info; // 将SectionInfo对象存入_config_map中
-//}
-/////////////// 旧版代码 ///////////////

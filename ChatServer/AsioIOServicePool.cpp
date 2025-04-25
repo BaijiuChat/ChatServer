@@ -9,13 +9,11 @@ AsioIOServicePool::AsioIOServicePool(std::size_t size) :
     // io_context池，多个银行窗口（比如2个窗口），每个窗口独立处理业务，避免顾客挤在一个窗口排队。
     for (std::size_t i = 0; i < size; ++i) {
         // 使用emplace创建Work对象，而不是错误的赋值方式
-		_works[i] = std::make_unique<Work>(_ioServices[i].get_executor());
-		// 让每个窗口都处于“营业中”状态
-		// 这样可以避免io_context在没有工作时自动退出
-		// 也可以使用boost::asio::executor_work_guard来实现
-		// _works[i] = std::make_unique<Work>(_ioServices[i]);
+        _works[i] = std::make_unique<Work>(_ioServices[i].get_executor());
+        // 让每个窗口都处于"营业中"状态
+        // 这样可以避免io_context在没有工作时自动退出
     }
-    // 窗口的“营业中”牌子（只要挂着，窗口就保持工作状态，即使暂时没顾客）。
+    // 窗口的"营业中"牌子（只要挂着，窗口就保持工作状态，即使暂时没顾客）。
     // 遍历多个ioservice，创建多个线程，每个线程内部启动ioservice
     // 在AsioIOServicePool.cpp中添加状态监控
     for (std::size_t i = 0; i < _ioServices.size(); ++i) {
@@ -46,18 +44,23 @@ AsioIOServicePool::~AsioIOServicePool() {
 
 // 叫号机按轮询分配窗口（顾客1去窗口A，顾客2去窗口B，顾客3又回到窗口A，公平分配）。
 boost::asio::io_context& AsioIOServicePool::GetIOService() {
-    auto& service = _ioServices[_nextIOService++];
-    if (_nextIOService == _ioServices.size()) {
-        _nextIOService = 0;
+    std::lock_guard<std::mutex> lock(_io_mutex);
+    // 使用原子操作避免竞态
+    auto current = _nextIOService.fetch_add(1) % _ioServices.size();
+    if (current >= _ioServices.size()) {
+        _nextIOService.store(0);
+        current = 0;
     }
-    return service;
+    return _ioServices[current];
 }
 
 // Stop 方法优化
 void AsioIOServicePool::Stop() {
     // 先重置工作守卫，这样io_service知道不会有新工作了
     for (auto& work : _works) {
-        work.reset();
+        if (work) {
+            work.reset();
+        }
     }
 
     // 然后停止io_service，确保所有待处理工作都被取消
