@@ -64,6 +64,8 @@ public:
 		}
 		return *this;
 	}
+
+	std::string GetValue(const std::string& section, const std::string& key) const;
 	
 private:
 	ConfigMgr();

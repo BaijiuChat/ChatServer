@@ -29,6 +29,25 @@ ConfigMgr::ConfigMgr() {
 	}
 }
 
+std::string ConfigMgr::GetValue(const std::string& section, const std::string& key) const
+{
+	// 1. 检查section是否存在
+	auto section_it = _config_map.find(section);
+	if (section_it == _config_map.end()) {
+		return ""; // 或者可以throw异常
+	}
+
+	// 2. 检查key是否存在
+	const auto& section_data = section_it->second._section_datas;
+	auto key_it = section_data.find(key);
+	if (key_it == section_data.end()) {
+		return ""; // 或者可以throw异常
+	}
+
+	// 3. 返回找到的值
+	return key_it->second;
+}
+
 /////////////// 旧版代码 ///////////////
 //boost::property_tree::ptree pt; // 创建一个ptree对象
 //boost::property_tree::read_ini(config_path.string(), pt); // 读取配置文件

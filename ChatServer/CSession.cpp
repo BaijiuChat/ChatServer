@@ -5,6 +5,8 @@
 #include <json/value.h>
 #include "CSession.h"
 #include "CServer.h"
+#include "LogicSystem.h"
+#include "MsgNode.h"
 
 CSession::CSession(boost::asio::io_context& io_context, CServer* server) :
 	_socket(io_context), _server(server), _b_close(false), _b_head_parse(false) 
@@ -30,7 +32,7 @@ void CSession::Start() {
 }
 
 void CSession::Send(std::string msg, short msgid) {
-	std::lock_guard<std::mutex> lock(_send_mutex);
+	std::lock_guard<std::mutex> lock(_send_lock);
 	int send_que_size = _send_que.size();
 	if (send_que_size > MAX_SENDQUE) {
 		std::cout << "发送队列已满，丢弃消息" << std::endl;
@@ -44,11 +46,11 @@ void CSession::Send(std::string msg, short msgid) {
 	}
 	auto& msgnode = _send_que.front();
 	boost::asio::async_write(_socket, boost::asio::buffer(msgnode->_data, msgnode->_total_len)),
-		std::bind(&CSession::HandleWrite, this, std::placeholders::_1, shared_from_this()));
+		std::bind(&CSession::HandleWrite, this, std::placeholders::_1, shared_from_this());
 }
 
 void CSession::Send(char* msg, short max_length, short msgid) {
-	std::lock_guard<std::mutex> lock(_send_mutex);
+	std::lock_guard<std::mutex> lock(_send_lock);
 	int send_que_size = _send_que.size();
 	if (send_que_size > MAX_SENDQUE) {
 		std::cout << "发送队列已满，丢弃消息" << std::endl;
@@ -62,7 +64,7 @@ void CSession::Send(char* msg, short max_length, short msgid) {
 	}
 	auto& msgnode = _send_que.front();
 	boost::asio::async_write(_socket, boost::asio::buffer(msgnode->_data, msgnode->_total_len)),
-		std::bind(&CSession::HandleWrite, this, std::placeholders::_1, shared_from_this()));
+		std::bind(&CSession::HandleWrite, this, std::placeholders::_1, shared_from_this());
 }
 
 void CSession::Close() {
@@ -93,7 +95,7 @@ void CSession::AsyncReadBody(int total_len)
 			}
 			memcpy(_recv_msg_node->_data, _data, bytes_transfered);
 			_recv_msg_node->_cur_len += bytes_transfered;
-			_recv_msg_node->data[_recv_msg_node->total_len] = '\0'; // 添加结束符，方便处理
+			_recv_msg_node->_data[_recv_msg_node->_total_len] = '\0'; // 添加结束符，方便处理
 			std::wcout << L"读取数据成功，数据是" << _recv_msg_node->_data << std::endl;
 			// 将消息投递到逻辑队列中
 			LogicSystem::GetInstance()->PostMsgToQue(make_shared<LogicNode>(shared_from_this(), _recv_msg_node));
@@ -118,7 +120,7 @@ void CSession::AsyncReadHead(int total_len) {
 				return;
 			}
 
-			if (byte_transfered < HEAD_TOTAL_LEN) {
+			if (bytes_transfered < HEAD_TOTAL_LEN) {
 				std::cout << "读取头部失败，读取的字节数小于" << HEAD_TOTAL_LEN << std::endl;
 				Close();
 				_server->ClearSession(_uuid);
@@ -140,6 +142,8 @@ void CSession::AsyncReadHead(int total_len) {
 				_server->ClearSession(_uuid);
 				return;
 			}
+			short msg_len = 0;
+			memcpy(&msg_len, _recv_head_node->_data + HEAD_ID_LEN, HEAD_DATA_LEN);
 			_recv_msg_node = make_shared<RecvNode>(msg_len, msg_id);
 			AsyncReadBody(msg_len);
 		}
@@ -155,9 +159,9 @@ void CSession::HandleWrite(const boost::system::error_code& error, std::shared_p
 		if (!error) {
 			std::lock_guard<std::mutex> lock(_send_lock);
 			_send_que.pop();
-			if (!_send_que_empty()) {
+			if (!_send_que.empty()) {
 				auto& msgnode = _send_que.front();
-				boost::asio::async_write(_socket, boost::asio::buffer(msgnode->_node->data(), msgnode->_total_len),
+				boost::asio::async_write(_socket, boost::asio::buffer(msgnode->_data, msgnode->_total_len),
 					[this, shared_self](const boost::system::error_code& ec, std::size_t bytes_transfered) {
 						HandleWrite(ec, shared_self);
 					});
@@ -167,6 +171,12 @@ void CSession::HandleWrite(const boost::system::error_code& error, std::shared_p
 			std::cout << "发送失败，错误是" << error.message() << std::endl;
 			Close();
 			_server->ClearSession(_uuid);
+		}
+	}
+	catch (const std::exception& e) {
+		std::cout << "发送失败，异常是" << e.what() << std::endl;
+		Close();
+		_server->ClearSession(_uuid);
 	}
 }
 

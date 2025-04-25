@@ -12,7 +12,7 @@ class CServer
 public:
 	CServer(boost::asio::io_context& io_context, unsigned short& port);  // 上面的namespace
 	~CServer();
-	void ClearSession();
+	void ClearSession(std::string uuid);
 private:
 	void HandleAccept(std::shared_ptr<CSession>, const boost::system::error_code& error);
 	void StartAccept();

@@ -40,7 +40,7 @@ void CServer::StartAccept() {
 		});
 }
 
-void CServer::ClearSession() {  
+void CServer::ClearSession(std::string uuid) {  
    std::lock_guard<std::mutex> lock(_session_mutex);  
    _sessions.erase(uuid);
 }

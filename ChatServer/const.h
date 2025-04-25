@@ -66,14 +66,18 @@ enum ErrorCodes {
 
 #define CODEPREFIX "code_"
 
-#define MAX_LENGTH 1024*2
+#define MAX_LENGTH  1024*2
+//头部总长度
 #define HEAD_TOTAL_LEN 4
+//头部id长度
 #define HEAD_ID_LEN 2
+//头部数据长度
 #define HEAD_DATA_LEN 2
-#define MAX_RECVQUE 10000
+#define MAX_RECVQUE  10000
 #define MAX_SENDQUE 1000
 
+
 enum MSG_IDS {
-	MSG_CHAT_LOGIN = 1005,  // 登录
-	MSG_CHAT_LOGIN_RSP = 1006, // 登录回包
+    MSG_CHAT_LOGIN = 1005,  // 登录
+    MSG_CHAT_LOGIN_RSP = 1006, // 登录回包
 };

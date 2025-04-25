@@ -1,6 +1,7 @@
 #include "LogicSystem.h"
 #include <iostream>
 #include <boost/beast/core/ostream.hpp>
+#include "StatusGrpcClient.h"
 
 LogicSystem::LogicSystem() :_b_stop(false) {
 	RegisterCallBacks();
@@ -13,7 +14,7 @@ LogicSystem::~LogicSystem() {
 	_worker_thread.join();
 }
 
-void LogicSystem::PostMsgToQue(< shared_ptr<LogicNode> msg) {
+void LogicSystem::PostMsgToQue(shared_ptr<LogicNode> msg) {
 	std::unique_lock<std::mutex> unique_lk(_mutex);
 	_msg_que.push(msg);
 	// 由0到1的通知
