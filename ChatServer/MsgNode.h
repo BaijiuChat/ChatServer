@@ -5,7 +5,10 @@
 #include <boost/asio.hpp>
 using namespace std;
 using boost::asio::ip::tcp;
+
 class LogicSystem;
+class CSession;
+
 class MsgNode
 {
 public:

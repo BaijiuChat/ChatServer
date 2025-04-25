@@ -9,9 +9,10 @@
 #include "MsgNode.h"
 
 CSession::CSession(boost::asio::io_context& io_context, CServer* server) :
-	_socket(io_context), _server(server), _b_close(false), _b_head_parse(false) 
+	_socket(io_context), _server(server), _b_close(false), _b_head_parse(false)
 {
 	boost::uuids::uuid uuid = boost::uuids::random_generator()();
+	_uuid = boost::uuids::to_string(uuid); // 正确赋值uuid
 	_recv_head_node = std::make_shared<MsgNode>(HEAD_TOTAL_LEN);
 }
 
@@ -45,8 +46,9 @@ void CSession::Send(std::string msg, short msgid) {
 		return;
 	}
 	auto& msgnode = _send_que.front();
-	boost::asio::async_write(_socket, boost::asio::buffer(msgnode->_data, msgnode->_total_len)),
-		std::bind(&CSession::HandleWrite, this, std::placeholders::_1, shared_from_this());
+	// 修正格式：修复异步写入方法的调用
+	boost::asio::async_write(_socket, boost::asio::buffer(msgnode->_data, msgnode->_total_len),
+		std::bind(&CSession::HandleWrite, this, std::placeholders::_1, shared_from_this()));
 }
 
 void CSession::Send(char* msg, short max_length, short msgid) {
@@ -63,8 +65,9 @@ void CSession::Send(char* msg, short max_length, short msgid) {
 		return;
 	}
 	auto& msgnode = _send_que.front();
-	boost::asio::async_write(_socket, boost::asio::buffer(msgnode->_data, msgnode->_total_len)),
-		std::bind(&CSession::HandleWrite, this, std::placeholders::_1, shared_from_this());
+	// 修正格式：修复异步写入方法的调用
+	boost::asio::async_write(_socket, boost::asio::buffer(msgnode->_data, msgnode->_total_len),
+		std::bind(&CSession::HandleWrite, this, std::placeholders::_1, shared_from_this()));
 }
 
 void CSession::Close() {
@@ -105,7 +108,7 @@ void CSession::AsyncReadBody(int total_len)
 		catch (std::exception& e) {
 			std::cout << "读取数据失败，异常是" << e.what() << std::endl;
 		}
-	});
+		});
 }
 
 void CSession::AsyncReadHead(int total_len) {
@@ -131,7 +134,8 @@ void CSession::AsyncReadHead(int total_len) {
 
 			// 解析头部
 			short msg_id = 0;
-			memcpy(_recv_head_node->_data, _data, bytes_transfered);
+			// 正确读取msg_id - 从_data复制而不是重复复制
+			memcpy(&msg_id, _data, HEAD_ID_LEN);
 
 			// 网络字节序转化为本地字节序
 			msg_id = boost::asio::detail::socket_ops::network_to_host_short(msg_id);
@@ -144,13 +148,15 @@ void CSession::AsyncReadHead(int total_len) {
 			}
 			short msg_len = 0;
 			memcpy(&msg_len, _recv_head_node->_data + HEAD_ID_LEN, HEAD_DATA_LEN);
+			// 转换为主机字节序
+			msg_len = boost::asio::detail::socket_ops::network_to_host_short(msg_len);
 			_recv_msg_node = make_shared<RecvNode>(msg_len, msg_id);
 			AsyncReadBody(msg_len);
 		}
 		catch (std::exception& e) {
 			std::cout << "读取头部失败，异常是" << e.what() << std::endl;
 		}
-	});
+		});
 }
 
 void CSession::HandleWrite(const boost::system::error_code& error, std::shared_ptr<CSession> shared_self) {
@@ -180,15 +186,15 @@ void CSession::HandleWrite(const boost::system::error_code& error, std::shared_p
 	}
 }
 
-void CSession::asyncReadFull(std::size_t maxLength, 
-	std::function<void(const boost::system::error_code&, std::size_t)> handler) 
+void CSession::asyncReadFull(std::size_t maxLength,
+	std::function<void(const boost::system::error_code&, std::size_t)> handler)
 {
 	::memset(_data, 0, MAX_LENGTH);
 	asyncReadLen(0, maxLength, handler);
 }
 
-void CSession::asyncReadLen(std::size_t read_len, std::size_t total_len, 
-	std::function<void(const boost::system::error_code&, std::size_t)> handler) 
+void CSession::asyncReadLen(std::size_t read_len, std::size_t total_len,
+	std::function<void(const boost::system::error_code&, std::size_t)> handler)
 {
 	auto self = shared_from_this();
 	_socket.async_read_some(boost::asio::buffer(_data + read_len, total_len - read_len),
@@ -209,7 +215,7 @@ void CSession::asyncReadLen(std::size_t read_len, std::size_t total_len,
 }
 
 LogicNode::LogicNode(std::shared_ptr<CSession> session, std::shared_ptr<RecvNode> recvnode) :
-	_session(session), _recvnode(recvnode) 
+	_session(session), _recvnode(recvnode)
 {
 
 }

@@ -17,6 +17,8 @@ using grpc::ClientContext; // 上下文
 
 using message::GetChatServerReq;
 using message::GetChatServerRsp;
+using message::LoginReq;
+using message::LoginRsp;
 using message::StatusService;
 
 class StatusConPool {
