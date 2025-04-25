@@ -300,15 +300,16 @@ const char descriptor_table_protodef_message_2eproto[] ABSL_ATTRIBUTE_SECTION_VA
     "\n\005error\030\001 \001(\005\022\013\n\003uid\030\002 \001(\005\022\r\n\005token\030\003 \001("
     "\t2P\n\rVerifyService\022\?\n\rGetVerifyCode\022\025.me"
     "ssage.GetVerifyReq\032\025.message.GetVerifyRs"
-    "p\"\0002X\n\rStatusService\022G\n\rGetChatServer\022\031."
-    "message.GetChatServerReq\032\031.message.GetCh"
-    "atServerRsp\"\000b\006proto3"
+    "p\"\0002\207\001\n\rStatusService\022G\n\rGetChatServer\022\031"
+    ".message.GetChatServerReq\032\031.message.GetC"
+    "hatServerRsp\"\000\022-\n\005Login\022\021.message.LoginR"
+    "eq\032\021.message.LoginRspb\006proto3"
 };
 static ::absl::once_flag descriptor_table_message_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_message_2eproto = {
     false,
     false,
-    501,
+    549,
     descriptor_table_protodef_message_2eproto,
     "message.proto",
     &descriptor_table_message_2eproto_once,
