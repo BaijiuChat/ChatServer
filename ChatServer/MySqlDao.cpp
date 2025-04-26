@@ -4,12 +4,13 @@
 MysqlDao::MysqlDao()
 {
 	auto & cfg = ConfigMgr::Inst();
-	const auto& host = cfg["Mysql"]["Host"];
-	const auto& port = cfg["Mysql"]["Port"];
-	const auto& pwd = cfg["Mysql"]["Passwd"];
-	const auto& schema = cfg["Mysql"]["Schema"];
-	const auto& user = cfg["Mysql"]["User"];
-	pool_.reset(new MySqlPool(host+":"+port, user, pwd,schema, 5));
+	const auto& host = cfg["MySQL"]["Host"];
+	const auto& port = cfg["MySQL"]["Port"];
+	const auto& pwd = cfg["MySQL"]["Passwd"];
+	const auto& schema = cfg["MySQL"]["Schema"];
+	const auto& user = cfg["MySQL"]["User"];
+	const auto& poolSize = std::stoi(cfg["MySQL"]["PoolSize"]);
+	pool_.reset(new MySqlPool(host + ":" + port, user, pwd, schema, poolSize));
 }
 
 MysqlDao::~MysqlDao(){

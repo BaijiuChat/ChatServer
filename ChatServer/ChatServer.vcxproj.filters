@@ -101,6 +101,9 @@
     <ClInclude Include="MsgNode.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="data.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="config.ini" />
